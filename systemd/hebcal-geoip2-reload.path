@@ -1,0 +1,12 @@
+[Unit]
+Description=Reload hebcal-geoip2 when the GeoIP database changes
+Documentation=https://github.com/hebcal/hebcal-geoip2
+
+[Path]
+# geoipupdate writes a temp file and atomically renames it into place; the
+# rename is what inotify (and therefore this PathChanged watch) observes.
+PathChanged=/var/lib/GeoIP/GeoLite2-City.mmdb
+Unit=hebcal-geoip2-reload.service
+
+[Install]
+WantedBy=multi-user.target
