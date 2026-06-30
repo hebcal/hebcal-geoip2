@@ -73,13 +73,47 @@ go build -o hebcal-geoip2 .
 
 ### Reloading the database
 
-`geoipupdate` (or any process that refreshes the `.mmdb`) can signal the
-service to reopen the file without downtime:
+The service reopens the `.mmdb` without downtime when it receives `SIGHUP`:
 
 ```bash
 systemctl reload hebcal-geoip2     # sends SIGHUP
 # or
 kill -HUP "$(pidof hebcal-geoip2)"
+```
+
+#### Reloading automatically after geoipupdate
+
+`geoipupdate` has no post-download hook, so wire the reload up with a systemd
+`.path` unit that watches the database file. This is independent of *how* the
+file is refreshed — cron, the `geoipupdate.timer`, or a manual run all trigger
+it identically, because `geoipupdate` atomically renames the new file into
+place and the rename is what the watch observes:
+
+```bash
+cp systemd/hebcal-geoip2-reload.path    /etc/systemd/system/
+cp systemd/hebcal-geoip2-reload.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now hebcal-geoip2-reload.path
+```
+
+The [`.path`](systemd/hebcal-geoip2-reload.path) unit triggers the oneshot
+[`.service`](systemd/hebcal-geoip2-reload.service), which runs
+`systemctl reload hebcal-geoip2` (→ `SIGHUP`). The oneshot goes inactive
+immediately, so the watch re-arms for the next update.
+
+Alternatively, if you drive updates from the `geoipupdate.timer`, add a drop-in
+instead of the path watcher:
+
+```ini
+# /etc/systemd/system/geoipupdate.service.d/reload-hebcal.conf
+[Service]
+ExecStartPost=-/bin/systemctl reload hebcal-geoip2.service
+```
+
+or, with a cron-driven update, append the reload to the cron command:
+
+```cron
+/usr/bin/geoipupdate && systemctl reload hebcal-geoip2
 ```
 
 ## Deploying

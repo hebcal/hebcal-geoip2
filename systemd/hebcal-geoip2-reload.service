@@ -1,0 +1,12 @@
+[Unit]
+Description=Reload hebcal-geoip2 after a GeoIP database update
+Documentation=https://github.com/hebcal/hebcal-geoip2
+# No point reloading if the service isn't running.
+After=hebcal-geoip2.service
+
+[Service]
+Type=oneshot
+# Sends SIGHUP (via the main unit's ExecReload), which makes the service
+# reopen the .mmdb with zero downtime. This is a oneshot that goes inactive
+# immediately, so the .path unit re-arms for the next update.
+ExecStart=/bin/systemctl reload hebcal-geoip2.service
