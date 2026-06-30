@@ -1,0 +1,38 @@
+[Unit]
+Description=hebcal-geoip2 GeoIP lookup microservice
+Documentation=https://github.com/hebcal/hebcal-geoip2
+After=network.target
+# The mmdb is maintained by geoipupdate; we only need it present at start.
+Wants=geoipupdate.timer
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hebcal-geoip2 \
+  -db /var/lib/GeoIP/GeoLite2-City.mmdb \
+  -socket /run/hebcal-geoip2/geoip2.sock
+# SIGHUP makes the service reopen the database (e.g. after geoipupdate).
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=2
+
+# Creates and owns /run/hebcal-geoip2 (cleaned up on stop). The socket itself
+# is chmod 0666 by the service so the web app's user can connect regardless of
+# group membership.
+RuntimeDirectory=hebcal-geoip2
+RuntimeDirectoryMode=0755
+
+# Run unprivileged; the mmdb and socket dir are world-readable/traversable.
+DynamicUser=yes
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=/var/lib/GeoIP
+
+[Install]
+WantedBy=multi-user.target

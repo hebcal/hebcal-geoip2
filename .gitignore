@@ -1,0 +1,4 @@
+/hebcal-geoip2
+*.mmdb
+*.test
+*.out
